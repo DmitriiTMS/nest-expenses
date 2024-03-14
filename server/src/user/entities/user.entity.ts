@@ -13,6 +13,9 @@ export class User {
     @Column()
     password: string
 
+    @Column({default: null})
+    password_open: string
+
     @OneToMany(() => Category, (category) => category.user, { onDelete: 'CASCADE' })
     categories: Category[]
 

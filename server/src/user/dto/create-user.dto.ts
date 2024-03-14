@@ -6,4 +6,5 @@ export class CreateUserDto {
 
     @MinLength(3, {message: 'Пароль должен быть более 3 символов'})
     password: string;
+
 }
