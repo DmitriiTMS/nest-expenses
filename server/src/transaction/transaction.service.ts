@@ -1,26 +1,96 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { Transaction } from './entities/transaction.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class TransactionService {
-  create(createTransactionDto: CreateTransactionDto) {
-    return 'This action adds a new transaction';
+
+  constructor(
+    @InjectRepository(Transaction)
+    private readonly transactionRepository: Repository<Transaction>,
+  ) { }
+
+  async create(createTransactionDto: CreateTransactionDto, id: number) {
+    const newTransaction = {
+      title: createTransactionDto.title,
+      amount: createTransactionDto.amount,
+      type: createTransactionDto.type,
+      category: { id: +createTransactionDto.category },
+      user: { id }
+    }
+    if (!newTransaction) throw new BadRequestException('Не удалось создать транзакцию transaction.service.ts create')
+    return await this.transactionRepository.save(newTransaction);
   }
 
-  findAll() {
-    return `This action returns all transaction`;
+  async findAll(id: number) {
+    const transactions = await this.transactionRepository.find({
+      where: {
+        user: {
+          id: id
+        },
+      },
+      order: {
+        createdAt: "DESC"
+      },
+    })
+    return transactions
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} transaction`;
+  async findOne(id: number) {
+    const transaction = await this.transactionRepository.findOne({
+      where: {
+        id: id
+      },
+      relations: {
+        user: true,
+        category: true
+      }
+    })
+    if (!transaction) throw new NotFoundException('Такой транзакции нет transaction.service.ts findOne')
+    return transaction
   }
 
-  update(id: number, updateTransactionDto: UpdateTransactionDto) {
-    return `This action updates a #${id} transaction`;
+  async update(id: number, updateTransactionDto: UpdateTransactionDto) {
+    const transaction = await this.transactionRepository.findOne({
+      where: {
+        id: id
+      }
+    })
+    if (!transaction) throw new NotFoundException('Такой транзакции нет transaction.service.ts update')
+    return await this.transactionRepository.update(id, transaction)
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} transaction`;
+  async remove(id: number) {
+    const transaction = await this.transactionRepository.findOne({
+      where: {
+        id: id
+      }
+    })
+    if (!transaction) throw new NotFoundException('Такой транзакции нет transaction.service.ts remove')
+    return await this.transactionRepository.delete(id);
   }
+
+  async findAllPagination(id: number, page: number, limit: number) {
+    const transactions = await this.transactionRepository.find({
+      where: {
+        user: {
+          id: id
+        },
+      },
+      // relations: {
+      //   category: true,
+      //   user: true
+      // },
+      order: {
+        createdAt: "DESC"
+      },
+      take: limit,
+      skip: (page - 1) * limit
+    })
+    return transactions
+  }
+
 }
