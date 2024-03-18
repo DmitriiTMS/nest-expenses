@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -19,32 +19,54 @@ export class CategoryService {
       },
       title: createCategoryDto.title
     })
-
     if(isExist.length) throw new BadRequestException('Категория с таким заголовком уже существует category.service.ts')
-
     const newCategory = {
       title: createCategoryDto.title,
       user: {
         id: id
       }
     }
-
     return await this.categoryRepository.save(newCategory);
   }
 
-  findAll() {
-    return `This action returns all category`;
+  async findAll(id: number) {
+    return await this.categoryRepository.find({
+      where: {
+        user: {
+          id: id
+        }
+      },
+      relations: {
+        transactions: true
+      }
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} category`;
+  async findOne(id: number) {
+    const category = await this.categoryRepository.findOne({
+      where: { id: id},
+      relations: {
+        user: true,
+        transactions: true
+      }
+    });
+     if(!category) throw new NotFoundException('Такой категории не существует category.service.ts findOne')
+    return category;
   }
 
-  update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    return `This action updates a #${id} category`;
+  async update(id: number, updateCategoryDto: UpdateCategoryDto) {
+    const category = await this.categoryRepository.findOne({
+      where: { id: id}
+    });
+    if(!category) throw new NotFoundException('Такой категории не существует category.service.ts update')
+    return await this.categoryRepository.update(id, updateCategoryDto);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} category`;
+  async remove(id: number) {
+    const category = await this.categoryRepository.findOne({
+      where: { id: id}
+    });
+    if(!category) throw new NotFoundException('Такой категории не существует category.service.ts remove')
+    return this.categoryRepository.delete(id);
   }
 }
